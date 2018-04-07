@@ -1,34 +1,35 @@
-import math
-
 import numpy as np
-
+import math
 import sys
-
+import random
 import importlib
 
-import cabin; importlib.reload(cabin)
+if not '../aux/' in sys.path: sys.path.append('../aux/')
 
-Nrow = 5; Ncol = 7; Nempty = 0
+import cabin
+import auxsys
+
+importlib.reload(cabin)
+importlib.reload(auxsys)
+
+Nrow = 20
+Ncol = 7
+Nempty = 0
 
 Npsg = Nrow * (Ncol - 1) - Nempty
 
-psg_num = []; psg_dest = []; psg_loc = []
+psg = {}
 
 for i in range(1, Npsg + 1):
 
-    psg_num.append(i)
+    psg[i] = {'dest': 'tbd', 'loc': -1, 'llt': random.uniform(0, 100), 'stat': 'oo'}
 
-    psg_dest.append('tbd')
+#sys.exit()
 
-    psg_loc.append(-1)
+cab = [[0] * Ncol for i in range(Nrow)]
+cab[0][3] = 1
 
-psg = {}
-
-for i in range(Npsg): psg[psg_num[i]] = {'dest': psg_dest[i], 'loc': psg_loc[i]}
-
-cab =    [[0] * Ncol for i in range(Nrow)]; cab[0][3] = 1
-
-cabimg = cabin.Image(cab)
+cabimg = cabin.image(cab)
 
 E = np.zeros((Nrow, Ncol))
 
@@ -44,77 +45,137 @@ E[Nrow - 1, 6] = -7.0
 
 alpha = -0.25
 
-for i in range(Nrow - 2, -1, -1): E[i, :] = E[Nrow - 1, :] + alpha * (Nrow - 1 - i)
+for i in range(Nrow - 2, -1, -1):
 
-p = cabin.Prob(E, T)
+    E[i, :] = E[Nrow - 1, :] + alpha * (Nrow - 1 - i)
 
-psg[1]['dest'] = cabin.ChooseSeat(p); psg[1]['loc'] = 0
+#initial probabilities
+p = cabin.prob(E, T)
 
-for i in range(len(cabimg)): print(cabimg[i])
+#possible passenger statuses
+stat = ['mf', 'ww', 'll', 'ld', 'mb']
+
+#first passenger chooses a seat
+psg[1]['dest'] = cabin.choose_seat(p)
+psg[1]['loc'] = 0
+psg[1]['stat'] = stat[0]
+
+for i in range(len(cabimg)):
+
+    print(cabimg[i])
+
+time = 0.0
+
+time_step = 0
 
 while psg:
 
+# listing all passegners that have entered the cabin
     for num in psg.keys():
 
-        print(num, ':', psg[num])
+        if type(psg[num]['dest']) == list:
 
-    seat_change = []
+            print(num, ':', psg[num])
+
+#-------------------------------------------------------------------------
+# first thing is to check whether any passenger needs to change their seat
+# because it has been taken while they were walking to it
+#-------------------------------------------------------------------------
+    redirected = []
 
     for num in psg.keys():
 
-        psg_loc = psg[num]['loc']
+        loc = psg[num]['loc']
 
-        psg_dest = psg[num]['dest']
+        dest = psg[num]['dest']
 
-        if type(psg_dest) == list:
+# this condition means that the passenger has entered the airplane cabin
+        if type(dest) == list:
 
-            if cab[psg_dest[0]][psg_dest[1]] != 0:
+# this condition means that their chosed seat has been occupied
+            if cab[dest[0]][dest[1]] != 0:
 
-                ahead = cabin.Prob(E, T, psg_loc)
+                ahead = cabin.prob(E, T, loc)
             
-                psg[num]['dest'] = cabin.ChooseSeat(ahead)
+                psg[num]['dest'] = cabin.choose_seat(ahead)
 
-                seat_change.append(num)
+                redirected.append(num)
 
-    for num in seat_change:
+    for num in redirected:
 
-        print('Passenger ', num, ' changed seat to ', psg[num]['dest'])
+        print('Passenger ', num, ' is now headed to seat ', psg[num]['dest'])
 
-    seated_psg = []
+#---------------------------------------------------------------------------
+# secondly we check which passengers (if any) have reached their chosen seat
+#---------------------------------------------------------------------------
+
+    time_contrib = []
+
+    seated = []
 
     for num in psg.keys():
 
-        psg_loc = psg[num]['loc']
+        loc = psg[num]['loc']
 
-        psg_dest = psg[num]['dest']
+        dest = psg[num]['dest']
 
-        if type(psg_dest) == str or psg_loc != psg_dest[0]: continue
+        if type(dest) == str or loc != dest[0]:
 
-        cab[psg_loc][3] = 0
+            continue
 
-        cab[psg_dest[0]][psg_dest[1]] = num
+        remaining = psg[num]['llt']
 
-        seated_psg.append(num)
+        if remaining == 0.0:
 
-        E[psg_dest[0], psg_dest[1]] = 1.0e+100
+            cab[loc][3] = 0
 
-        if num != Npsg: p = cabin.Prob(E, T)
+            cab[dest[0]][dest[1]] = num
 
-        if num == Npsg: p[psg_dest[0], psg_dest[1]] = 0.0e0
+            time_contrib.append(0.0)
 
-        cabimg = cabin.Image(cab)
+            seated.append(num)
 
-    for num in seated_psg:
+            E[dest[0], dest[1]] = 1.0e+100
+
+            if len(psg) == 1:
+
+                p[dest[0], dest[1]] = 0.0e0
+
+            else:
+
+                p = cabin.prob(E, T)
+
+            cabimg = cabin.image(cab)
+
+            continue
+
+        if  remaining > 1.0:
+
+            psg[num]['llt'] = remaining - 1.0
+
+            psg[num]['stat'] = stat[2]
+
+            time_contrib.append(1.0)
+
+        if  remaining <= 1.0:
+
+            psg[num]['llt'] = 0.0
+
+            psg[num]['stat'] = stat[3]
+
+            time_contrib.append(remaining)
+
+    for num in seated:
 
         print('Passenger ', num, ' seated')
 
         del psg[num]
 
-    seated_psg = []
+    seated = []
 
-    aisle = cabin.Aisle(cabimg)
+    a = cabin.aisle(cabimg)
 
-    if psg and aisle[0] == 0 and aisle[1] == 0:
+    if psg and a[0] == 0 and a[1] == 0:
 
         for num in psg.keys():
 
@@ -122,68 +183,125 @@ while psg:
 
                 print('New Passenger ', num)
 
-                psg_dest = cabin.ChooseSeat(p)
+                dest = cabin.choose_seat(p)
 
-                psg[num]['dest'] = psg_dest
+                psg[num]['dest'] = dest
 
                 psg[num]['loc'] = 0
 
-                if psg_dest[0] == 0:
+                psg[num]['stat'] = stat[0]
 
-                    cab[0][psg_dest[1]] = num
+                if dest[0] == 0:
 
-                    cabimg = cabin.Image(cab)
+                    remaining = psg[num]['llt']
 
-                    E[0, psg_dest[1]] = 1.0e+100
+                    if remaining == 0.0:
 
-                    p = cabin.Prob(E, T)
+                        cab[0][dest[1]] = num
 
-                    seated_psg.append(num)
+                        cabimg = cabin.image(cab)
 
-                    continue
+                        E[0, dest[1]] = 1.0e+100
+
+                        p = cabin.prob(E, T)
+
+                        time_contrib.append(0.0)
+
+                        seated.append(num)
+
+                        continue
+
+                    if  remaining > 1.0:
+
+                        psg[num]['llt'] = remaining - 1.0
+
+                        psg[num]['stat'] = stat[2]
+
+                        time_contrib.append(1.0)
+
+                    if  remaining <= 1.0:
+
+                        psg[num]['llt'] = 0.0
+
+                        psg[num]['stat'] = stat[3]
+
+                        time_contrib.append(remaining)
 
                 cab[0][3] = num
 
-                cabimg = cabin.Image(cab)
+                cabimg = cabin.image(cab)
 
                 break
 
-        for num in seated_psg:
+        for num in seated:
 
             print('Passenger ', num, ' seated')
 
             del psg[num]
 
-    aisle = cabin.Aisle(cabimg)
+    a = cabin.aisle(cabimg)
 
+#---------------------------------------------------------------------------
+# Change status of passengers depending on their current status and wheather
+# they can move forward
+#---------------------------------------------------------------------------
     for i in range(Nrow - 2):
 
-        if psg and aisle[i] == 1 and aisle[i + 1] == 0 and aisle[i + 2] == 0:
+        num = cab[i][3]
 
-            psg_num = cab[i][3]
+        if num == 0:
 
-            cab[i]    [3]    = 0
-            cab[i + 1][3]    = psg_num
+            continue
 
-            cabimg = cabin.Image(cab)
+        not_luggage = psg[num]['stat'] != stat[2] and psg[num]['stat'] != stat[3]
 
-            psg[psg_num]['loc'] = i + 1
+        if not_luggage and a[i] == 1 and a[i + 1] == 0 and a[i + 2] == 0:
 
-    for i in range(len(cabimg)): print(cab[i])
+            psg[num]['stat'] == stat[0]
 
-    print('\n')
+        if not_luggage and a[i] == 1 and a[i + 1] == 0 and a[i + 2] == 1:
 
-    aisle = cabin.Aisle(cabimg)
+            psg[num]['stat'] == stat[1]
 
-    if psg and aisle[Nrow - 1] == 0 and aisle[Nrow - 2] == 1:
+            print('Passenger ', num, 'is waiting')
 
-        psg_num = cab[Nrow - 2][3]
+        if not_luggage and a[i] == 1 and a[i + 1] == 1:
 
-        if psg[psg_num]['dest'][0] == Nrow - 1:
+            psg[num]['stat'] == stat[1]
 
-            cab[Nrow - 2][3] = 0
-            cab[Nrow - 1][3] = psg_num
+            print('Passenger ', num, ' is waiting')
 
-            cabimg = cabin.Image(cab)
+#---------------------------------------------------------------------------
+# Move passenger one cell further if there is an empty cell in front and the
+# passenger is moving already
+#---------------------------------------------------------------------------
+    for i in range(Nrow - 1):
 
-            psg[psg_num]['loc'] = Nrow - 1
+        if a[i] == 1 and a[i + 1] == 0:
+
+            num = cab[i][3]
+
+            if psg[num]['stat'] == stat[0]:
+
+                cab[i][3] = 0
+                cab[i + 1][3] = num
+
+                cabimg = cabin.image(cab)
+
+                psg[num]['loc'] = i + 1
+
+                time_contrib.append(1.0)
+
+    if not time_contrib:
+
+        auxsys.abort('time_contrib list is somehow empty. Abort.')
+
+    time += cabin.time_increment(time_contrib)
+
+    time_step += 1
+
+    for i in range(len(cabimg)):
+
+        print(cab[i])
+
+    print('\ntime_step = ', time_step, ' time = ', time, '\n')

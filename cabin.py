@@ -6,7 +6,7 @@ from itertools import product
 
 import math
 
-def Prob(E, T, i0 = 0):
+def prob(E, T, i0 = 0):
 
     Nrow = len(E[:, 0])
 
@@ -22,7 +22,7 @@ def Prob(E, T, i0 = 0):
 
     return p
 
-def Image(cab):
+def image(cab):
 
     Nrow = len(cab)
 
@@ -36,7 +36,7 @@ def Image(cab):
 
     return cabimg
 
-def ChooseSeat(p):
+def choose_seat(p):
 
     r = random.uniform(0, 1)
 
@@ -58,10 +58,40 @@ def ChooseSeat(p):
 
     return [i_seat, j_seat]
 
-def Aisle(cab):
+def aisle(cab):
 
     a = []
 
     for i in range(len(cab)): a.append(cab[i][3])
 
     return a
+
+def time_increment(time_contrib):
+
+    dt = 0.0
+
+    all_contrib_lt_one = True
+
+    for contrib in time_contrib:
+
+        if contrib >= 1.0:
+
+            all_contrib_lt_one = False
+
+            break
+
+    if all_contrib_lt_one:
+
+        dt = max(np.array(time_contrib))
+
+    else:
+
+        for contrib in time_contrib:
+
+            if contrib < 1.0:
+
+                dt += contrib
+
+        if dt < 1.0: dt = 1.0
+
+    return dt
