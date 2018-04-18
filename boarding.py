@@ -15,6 +15,7 @@ importlib.reload(auxsys)
 Nrow = 20
 Ncol = 7
 Nempty = 0
+#Nempty = 120
 
 Npsg = Nrow * (Ncol - 1) - Nempty
 
@@ -257,17 +258,17 @@ while psg:
 
         if not_luggage and a[i] == 1 and a[i + 1] == 0 and a[i + 2] == 0:
 
-            psg[num]['stat'] == stat[0]
+            psg[num]['stat'] = stat[0]
 
         if not_luggage and a[i] == 1 and a[i + 1] == 0 and a[i + 2] == 1:
 
-            psg[num]['stat'] == stat[1]
+            psg[num]['stat'] = stat[1]
 
             print('Passenger ', num, 'is waiting')
 
         if not_luggage and a[i] == 1 and a[i + 1] == 1:
 
-            psg[num]['stat'] == stat[1]
+            psg[num]['stat'] = stat[1]
 
             print('Passenger ', num, ' is waiting')
 
