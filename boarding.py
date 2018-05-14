@@ -1,12 +1,11 @@
 import math
-
 import numpy as np
-
 import sys
-
 import importlib
 
-import cabin; importlib.reload(cabin)
+import cabin
+
+importlib.reload(cabin)
 
 Nrow = 5; Ncol = 7; Nempty = 0
 
