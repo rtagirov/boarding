@@ -6,7 +6,13 @@ import time
 
 def abort(message = 'Abort.'):
 
-    print('\n' + message)
+    if message != 'Abort.':
+
+        print('\n' + message + ' Abort.')
+
+    else:
+
+        print('\n' + message)
 
     exit()
 
