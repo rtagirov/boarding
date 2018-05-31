@@ -72,7 +72,7 @@ while psg:
 #       this condition means that the passenger has entered the airplane cabin
         if type(dest) == list:
 
-#           this condition means that their chosed seat has been occupied
+#           this condition means that their chosen seat has been occupied
             if cab[dest[0], dest[1]] != 0:
 
 #               recalculate probabilites, but using only seats ahead of the passenger, i.e.
